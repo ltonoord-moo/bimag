@@ -53,7 +53,11 @@
       order: -1; position: sticky; top: 0; z-index: 5; padding: 8px;
       border-radius: 0 0 12px 12px; box-shadow: 0 6px 12px rgba(0,0,0,.12);
     }
-    canvas { width: auto; max-width: 100%; max-height: 42vh; margin: 0 auto; }
+    /* vaste hoogte + vaste verhouding 4:5, zodat Safari (iPhone) het voorbeeld niet uitrekt */
+    .voorbeeld canvas { height: 40vh; height: 40svh; width: auto; aspect-ratio: 4 / 5; max-width: 100%; margin: 0 auto; }
+    /* toetsenbord open (je typt in een veld): voorbeeld kleiner, zodat het veld zichtbaar blijft */
+    body.typen .voorbeeld canvas { height: 22vh; height: 22svh; }
+    body.typen .voorbeeld .hint { display: none; }
     .voorbeeld .hint { text-align: center; font-size: .8rem; margin-top: 4px; }
     button.hoofd { width: 100%; padding: 14px; font-size: 1.05rem; }
     .knoppen button.tweede { flex: 1; }
@@ -90,7 +94,7 @@
   .layouts label.uit { opacity: .35; cursor: not-allowed; }
   .check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: .95rem; }
   .voorbeeld { position: sticky; top: 12px; }
-  canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #ccc; touch-action: none; cursor: grab; }
+  canvas { width: 100%; height: auto; aspect-ratio: 4 / 5; display: block; border-radius: 8px; background: #ccc; touch-action: none; cursor: grab; }
   canvas.slepen { cursor: grabbing; }
   .hint { font-size: .9rem; color: #666; margin-top: 8px; }
   .klein { font-size: .85rem; color: #777; margin-top: 6px; }
@@ -473,6 +477,12 @@ $('posttekst').value = POSTTEKSTEN[0];
 document.querySelectorAll('input[name=tekstkeuze]').forEach(r => r.addEventListener('change', () => {
   $('posttekst').value = POSTTEKSTEN[+r.value];
 }));
+
+/* ---------- toetsenbord open op mobiel: voorbeeld kleiner ---------- */
+document.addEventListener('focusin', e => {
+  if (e.target.matches('input[type=text], textarea')) document.body.classList.add('typen');
+});
+document.addEventListener('focusout', () => document.body.classList.remove('typen'));
 
 /* ---------- start ---------- */
 kiesOntwerp(ONTWERPEN[0]);
