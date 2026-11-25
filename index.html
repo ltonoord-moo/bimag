@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BIMAG Postmaker</title>
+<!-- Lettertypes (gratis, Google Fonts): Fira Sans Condensed (lijkt op Sansa Condensed) + Kalam (handschrift) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@400;700&family=Kalam&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --oranje: #DC671C;
+    --groen: #4f7d2c;
+    --bg: #f4f2ec;
+    --kaart: #ffffff;
+    --tekst: #222;
+    --rand: #d9d4c7;
+    --sans: "Fira Sans Condensed", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--tekst); font-family: var(--sans); font-size: 17px; }
+  header { background: var(--groen); color: #fff; padding: 18px 16px; }
+  header h1 { margin: 0; font-size: 1.6rem; font-weight: 700; }
+  header p { margin: 4px 0 0; opacity: .9; }
+  .kiezer { max-width: 1100px; margin: 0 auto; padding: 16px 16px 0; }
+  .kiezer h2 { font-size: 1.1rem; margin: 0 0 8px; color: var(--groen); }
+  .strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+  .strip button {
+    flex: 0 0 auto; width: 118px; padding: 0; border: 3px solid transparent; border-radius: 10px;
+    background: none; cursor: pointer; scroll-snap-align: start; text-align: center; color: var(--tekst);
+  }
+  .strip img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; border-radius: 7px; }
+  .strip span { display: block; font-size: .8rem; padding: 4px 2px; font-weight: 400; }
+  .strip button.actief { border-color: var(--oranje); }
+  .strip button.actief span { font-weight: 700; color: var(--oranje); }
+  main {
+    max-width: 1100px; margin: 0 auto; padding: 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;
+  }
+  @media (max-width: 800px) {
+    body { font-size: 16px; }
+    header { padding: 12px 16px; }
+    header h1 { font-size: 1.3rem; }
+    header p { font-size: .9rem; }
+    .kiezer { padding: 12px 0 0 16px; }
+    .kiezer h2 { font-size: 1rem; }
+    .strip button { width: 92px; }
+    .strip span { font-size: .75rem; }
+    main { grid-template-columns: 1fr; gap: 12px; padding: 12px 16px; }
+    /* voorbeeld blijft bovenin staan terwijl je eronder de velden invult */
+    .voorbeeld {
+      order: -1; position: sticky; top: 0; z-index: 5; padding: 8px;
+      border-radius: 0 0 12px 12px; box-shadow: 0 6px 12px rgba(0,0,0,.12);
+    }
+    canvas { width: auto; max-width: 100%; max-height: 42vh; margin: 0 auto; }
+    .voorbeeld .hint { text-align: center; font-size: .8rem; margin-top: 4px; }
+    button.hoofd { width: 100%; padding: 14px; font-size: 1.05rem; }
+    .knoppen button.tweede { flex: 1; }
+  }
+  .paneel { background: var(--kaart); border: 1px solid var(--rand); border-radius: 12px; padding: 16px; }
+  .stap { font-weight: 700; color: var(--groen); margin: 20px 0 6px; font-size: 1.1rem; }
+  .stap:first-child { margin-top: 0; }
+  label { display: block; font-size: .95rem; margin: 10px 0 4px; }
+  input[type=text], textarea {
+    width: 100%; padding: 10px; font: inherit; border: 1px solid var(--rand); border-radius: 8px; background: #fff;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .upload {
+    display: block; border: 2px dashed var(--groen); border-radius: 10px; padding: 20px 12px; margin: 0;
+    text-align: center; cursor: pointer; color: var(--groen); font-weight: 700; background: #f7faf3;
+  }
+  .upload.over { background: #e6f0db; }
+  .upload input { display: none; }
+  .rij { display: flex; gap: 10px; align-items: center; }
+  .rij input[type=range] { flex: 1; }
+  .knoppen { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  button.hoofd, button.tweede {
+    font: inherit; font-weight: 700; border: 0; border-radius: 8px; padding: 12px 18px; cursor: pointer;
+    background: var(--oranje); color: #fff;
+  }
+  button.tweede { background: #fff; color: var(--groen); border: 2px solid var(--groen); padding: 8px 14px; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .layouts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .layouts label {
+    margin: 0; border: 2px solid var(--rand); border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; font-size: .9rem;
+  }
+  .layouts input { display: none; }
+  .layouts label:has(input:checked) { border-color: var(--groen); background: #f7faf3; color: var(--groen); font-weight: 700; }
+  .layouts label.uit { opacity: .35; cursor: not-allowed; }
+  .check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: .95rem; }
+  .voorbeeld { position: sticky; top: 12px; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #ccc; touch-action: none; cursor: grab; }
+  canvas.slepen { cursor: grabbing; }
+  .hint { font-size: .9rem; color: #666; margin-top: 8px; }
+  .klein { font-size: .85rem; color: #777; margin-top: 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BIMAG Postmaker</h1>
+  <p>Maak in een paar minuten je eigen social-media-post over BIMAG.</p>
+</header>
+
+<section class="kiezer">
+  <h2>Kies een ontwerp om mee te beginnen</h2>
+  <div class="strip" id="strip"></div>
+</section>
+
+<main>
+  <section class="paneel">
+    <div class="stap">1. Zet je eigen foto erin</div>
+    <label class="upload" id="dropzone">
+      📷 Klik hier of sleep je foto hierheen
+      <input type="file" id="bestand" accept="image/*">
+    </label>
+    <div class="klein">Je foto blijft op je eigen apparaat; er wordt niets geüpload.</div>
+    <div class="knoppen" id="terugRij" hidden><button class="tweede" id="terug">Terug naar de voorbeeldfoto</button></div>
+
+    <div class="stap">2. Kies waar de tekst staat</div>
+    <div class="layouts">
+      <label><input type="radio" name="opmaak" value="boven-wit" checked>Boven<br>wit</label>
+      <label><input type="radio" name="opmaak" value="boven-oranje">Boven<br>oranje</label>
+      <label><input type="radio" name="opmaak" value="onder-wit">Onder<br>wit</label>
+    </div>
+    <div class="klein">Oranje werkt het best bij een foto met een lichte lucht bovenin.</div>
+    <label class="check"><input type="checkbox" id="schaduw" checked> Foto iets donkerder achter de tekst (beter leesbaar)</label>
+    <label class="check" id="grafiekRij" hidden><input type="checkbox" id="grafiek" checked> Grafiek tonen</label>
+
+    <div class="stap">3. Pas de tekst aan</div>
+    <div id="veld-titel"><label for="titel">Titel</label><input type="text" id="titel" maxlength="40"></div>
+    <div id="veld-sub"><label for="sub">Ondertitel (Enter = nieuwe regel)</label><textarea id="sub" rows="3"></textarea></div>
+    <div id="veld-aantal"><label for="aantal">Aantal waarnemingen</label><input type="text" id="aantal" maxlength="8" inputmode="numeric"></div>
+    <label for="fotograaf">Naam fotograaf of afzender (mag leeg)</label>
+    <input type="text" id="fotograaf" maxlength="40" placeholder="bijv. Melkveehouder Jan Jansen">
+    <label for="voet">Handgeschreven regel onderaan (mag leeg)</label>
+    <input type="text" id="voet" maxlength="45">
+
+    <div class="stap">4. Zet je foto goed</div>
+    <div class="rij"><span>Inzoomen</span><input type="range" id="zoom" min="1" max="3" step="0.01" value="1"></div>
+    <div class="hint">Tip: sleep in het voorbeeld met je vinger of muis om de foto te verschuiven.</div>
+
+    <div class="stap">5. Opslaan en plaatsen</div>
+    <div class="knoppen">
+      <button class="hoofd" id="download">⬇ Download afbeelding</button>
+      <button class="tweede" id="deel" hidden>Delen…</button>
+    </div>
+    <div class="hint">De afbeelding is 1080 × 1350 pixels: precies goed voor Instagram, Facebook en LinkedIn.</div>
+
+    <div class="stap">6. Kies een tekst bij je post</div>
+    <div class="layouts" id="tekstKeuze">
+      <label><input type="radio" name="tekstkeuze" value="0" checked>Tekst 1</label>
+      <label><input type="radio" name="tekstkeuze" value="1">Tekst 2</label>
+      <label><input type="radio" name="tekstkeuze" value="2">Tekst 3</label>
+    </div>
+    <label for="posttekst">Je mag de tekst aanpassen</label>
+    <textarea id="posttekst" rows="7"></textarea>
+    <div class="knoppen"><button class="tweede" id="kopieer">Kopieer tekst</button></div>
+  </section>
+
+  <section class="paneel voorbeeld">
+    <canvas id="doek" width="1080" height="1350"></canvas>
+    <div class="hint" id="status">Even geduld, het ontwerp wordt geladen…</div>
+  </section>
+</main>
+
+<script>
+/* ============ ONTWERPEN ============
+   Maten komen rechtstreeks uit de Illustrator-bestanden (1080 x 1350).
+   start = basislijn van de eerste tekstregel (tekst boven)
+   eind  = basislijn van de laatste tekstregel (tekst onder)
+   gaps  = afstand tussen laatste regel van het ene blok en eerste regel van het volgende */
+const ONTWERPEN = [
+  { id: 'mijn-aantal', naam: 'Mijn aantal', opmaak: 'boven-wit', start: 107.2, gaps: [172.4],
+    blokken: [{ veld: 'sub', size: 60, x: 73.9 }, { veld: 'aantal', size: 163.6, x: 70.9 }],
+    sub: 'Het boerenland zit vol nachtvlinders!\nOp mijn bedrijf telde ik er dit jaar', aantal: '122', fotograaf: 'Fruitteler Jolanda Vermeer' },
+  { id: 'wapendrager', naam: 'Mooiste vangst', opmaak: 'boven-wit', start: 143.1, gaps: [72.9],
+    blokken: [{ veld: 'titel', size: 83.8, x: 70.9 }, { veld: 'sub', size: 60, x: 73.9 }],
+    titel: 'Wapendrager', sub: 'Mijn mooiste vangst\ndit jaar', fotograaf: 'Jurriën van Deijk' },
+  { id: 'bloeiend-vlinderjaar', naam: 'Najaarspiek', opmaak: 'boven-wit', start: 207.7, gaps: [55.8], credit: 'boven',
+    blokken: [{ veld: 'titel', size: 88.4, x: 77 }, { veld: 'sub', size: 48.9, x: 77 }],
+    titel: 'Bloeiend vlinderjaar', sub: 'Op het platteland', fotograaf: 'Akkerbouwer Harry Schreuder',
+    overlay: { src: 'ontwerpen/grafiek-overlay.png', x: 80, y: 690, w: 920, h: 620 } },
+  { id: 'deelnemers-gezocht', naam: 'Deelnemers gezocht', opmaak: 'boven-oranje', start: 158.8, gaps: [74.2],
+    blokken: [{ veld: 'titel', size: 88.4, x: 77 }, { veld: 'sub', size: 48.9, x: 74.3 }],
+    titel: 'Deelnemers gezocht', sub: 'In 2027 kunnen een aantal nieuwe agrariërs\nzich aansluiten bij BIMAG', fotograaf: '',
+    voet: 'Aanmelden: vlinderstichting.nl/bimag' },
+  { id: 'recordaantal', naam: 'Aantal', opmaak: 'boven-wit', start: 158.8, gaps: [87.8],
+    blokken: [{ veld: 'titel', size: 88.4, x: 77 }, { veld: 'sub', size: 48.9, x: 73.9 }],
+    titel: 'Recordaantal waarnemingen', sub: '150 boeren en tuinders\nvonden 48.190 vlinders\nin 2026', fotograaf: '' },
+  { id: 'meetpunten', naam: '3 meetpunten', opmaak: 'boven-wit', start: 143.1, gaps: [83.1],
+    blokken: [{ veld: 'titel', size: 83.8, x: 70.9 }, { veld: 'sub', size: 48.9, x: 73.9 }],
+    titel: '3 meetpunten per bedrijf', sub: 'Zo meten we het verschil tussen erf,\neen gangbaar beheerd perceel en\neen genomen natuurmaatregel', fotograaf: '' },
+  { id: 'gewone-grasuil', naam: 'Meest waargenomen', opmaak: 'boven-wit', start: 143.1, gaps: [72.9],
+    blokken: [{ veld: 'titel', size: 83.8, x: 70.9 }, { veld: 'sub', size: 60, x: 73.9 }],
+    titel: 'Gewone grasuil', sub: 'nr 1. nachtvlinder\ngevonden door boeren', fotograaf: 'Jurriën van Deijk' },
+  { id: 'ik-tel-dagvlinders', naam: 'Ik tel dagvlinders', opmaak: 'onder-wit', eind: 1213.0, gaps: [78.4], x: 190,
+    blokken: [{ veld: 'titel', size: 88.4, x: 190.2 }, { veld: 'sub', size: 48.9, x: 196.4 }],
+    titel: 'Ik tel dagvlinders', sub: 'Dit jaar zijn er 7.165 geteld\ndoor 24 boeren en tuinders', fotograaf: 'Adriaan Schep' },
+];
+
+/* ============ TEKSTEN BIJ DE POST ============
+   Drie keuzeteksten (nog voorbeeldtekst, later vervangen). */
+const POSTTEKSTEN = [
+  'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 🦋\n\nUt enim ad minim veniam: vlinderstichting.nl/bimag\n\n#BIMAG #lorem #ipsum',
+  'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.\n\nSunt in culpa qui officia: vlinderstichting.nl/bimag\n\n#BIMAG #dolor #sitamet',
+  'Curabitur pretium tincidunt lacus. Nulla gravida orci a odio, et tempus feugiat. Nullam varius, turpis et commodo pharetra, est eros bibendum elit. 🌾\n\nNec luctus magna felis: vlinderstichting.nl/bimag\n\n#BIMAG #consectetur #adipiscing',
+];
+
+const W = 1080, H = 1350, ORANJE = '#DC671C';
+const SANS = '"Fira Sans Condensed", sans-serif';
+const HAND = '"Kalam", cursive';
+const doek = document.getElementById('doek');
+const ctx = doek.getContext('2d');
+const $ = id => document.getElementById(id);
+
+let ontwerp = ONTWERPEN[0];
+let voorbeeldFoto = null, eigenFoto = null, overlayImg = null;
+let zoom = 1, px = 0, py = 0;
+const camera = new Image(); camera.src = 'camera.png'; camera.onload = () => teken();
+const cache = {};
+function laadImg(src) {
+  if (!cache[src]) cache[src] = new Promise((ok, fout) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fout; i.src = src; });
+  return cache[src];
+}
+
+/* ---------- ontwerpkiezer ---------- */
+const strip = $('strip');
+ONTWERPEN.forEach(o => {
+  const b = document.createElement('button');
+  b.innerHTML = `<img src="ontwerpen/${o.id}-thumb.jpg" alt=""><span>${o.naam}</span>`;
+  b.onclick = () => kiesOntwerp(o);
+  b.dataset.id = o.id;
+  strip.appendChild(b);
+});
+
+async function kiesOntwerp(o) {
+  ontwerp = o;
+  strip.querySelectorAll('button').forEach(b => b.classList.toggle('actief', b.dataset.id === o.id));
+  $('titel').value = o.titel || '';
+  $('sub').value = o.sub || '';
+  $('aantal').value = o.aantal || '';
+  $('voet').value = o.voet || '';
+  if (!eigenFoto) $('fotograaf').value = o.fotograaf || '';
+  document.querySelector(`input[name=opmaak][value=${o.opmaak}]`).checked = true;
+  const velden = o.blokken.map(b => b.veld);
+  ['titel', 'sub', 'aantal'].forEach(v => $('veld-' + v).hidden = !velden.includes(v));
+  $('grafiekRij').hidden = !o.overlay;
+  $('grafiek').checked = true;
+  zetOnderUit();
+  overlayImg = null;
+  if (o.overlay) laadImg(o.overlay.src).then(i => { if (ontwerp === o) { overlayImg = i; teken(); } });
+  voorbeeldFoto = null; teken();
+  try {
+    voorbeeldFoto = await laadImg('ontwerpen/' + o.id + '.jpg');
+    $('status').textContent = eigenFoto ? 'Sleep in het voorbeeld om je foto te verschuiven.' : 'Zet nu je eigen foto erin (stap 1).';
+  } catch (e) { $('status').textContent = 'De voorbeeldfoto kon niet worden geladen.'; }
+  if (ontwerp === o) teken();
+}
+
+// tekst onderaan kan niet samen met de grafiek (die staat onderaan)
+function zetOnderUit() {
+  const r = document.querySelector('input[name=opmaak][value=onder-wit]');
+  const uit = !!ontwerp.overlay && $('grafiek').checked;
+  r.disabled = uit;
+  r.parentElement.classList.toggle('uit', uit);
+  r.parentElement.title = uit ? 'Zet eerst "Grafiek tonen" uit' : '';
+}
+$('grafiek').addEventListener('change', zetOnderUit);
+
+/* ---------- eigen foto ---------- */
+function laadBestand(f) {
+  if (!f || !f.type.startsWith('image/')) { $('status').textContent = 'Dat is geen afbeelding. Kies een foto (jpg of png).'; return; }
+  const img = new Image();
+  img.onload = () => {
+    // naam van de voorbeeldfotograaf weghalen: het is nu jouw foto
+    if ($('fotograaf').value === (ontwerp.fotograaf || '')) $('fotograaf').value = '';
+    eigenFoto = img; zoom = 1; px = 0; py = 0; $('zoom').value = 1;
+    $('terugRij').hidden = false;
+    $('status').textContent = 'Sleep in het voorbeeld om je foto te verschuiven.';
+    teken();
+  };
+  img.onerror = () => { $('status').textContent = 'Deze foto kon niet worden geopend. Probeer een jpg of png.'; };
+  img.src = URL.createObjectURL(f);
+}
+$('bestand').addEventListener('change', e => { laadBestand(e.target.files[0]); e.target.value = ''; });
+const dz = $('dropzone');
+['dragenter', 'dragover'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('over'); }));
+dz.addEventListener('drop', e => laadBestand(e.dataTransfer.files[0]));
+$('terug').onclick = () => {
+  eigenFoto = null; zoom = 1; px = 0; py = 0; $('zoom').value = 1;
+  $('terugRij').hidden = true; $('fotograaf').value = ontwerp.fotograaf || ''; teken();
+};
+
+/* ---------- verschuiven en zoomen ---------- */
+let sleep = null;
+doek.addEventListener('pointerdown', e => {
+  sleep = { x: e.clientX, y: e.clientY, px, py };
+  doek.setPointerCapture(e.pointerId); doek.classList.add('slepen');
+});
+doek.addEventListener('pointermove', e => {
+  if (!sleep) return;
+  const s = W / doek.getBoundingClientRect().width;
+  px = sleep.px + (e.clientX - sleep.x) * s;
+  py = sleep.py + (e.clientY - sleep.y) * s;
+  teken();
+});
+['pointerup', 'pointercancel'].forEach(t => doek.addEventListener(t, () => { sleep = null; doek.classList.remove('slepen'); }));
+$('zoom').addEventListener('input', e => { zoom = +e.target.value; teken(); });
+
+/* ---------- tekenen ---------- */
+function opmaak() { return document.querySelector('input[name=opmaak]:checked').value; }
+
+function regels(tekst, maxB) {
+  const uit = [];
+  tekst.split('\n').forEach(alinea => {
+    const woorden = alinea.trim().split(/\s+/).filter(Boolean);
+    let r = '';
+    woorden.forEach(w => {
+      const test = r ? r + ' ' + w : w;
+      if (ctx.measureText(test).width > maxB && r) { uit.push(r); r = w; } else r = test;
+    });
+    if (r) uit.push(r);
+  });
+  return uit;
+}
+
+function lettertype(veld, size) {
+  return (veld === 'sub' ? '400 ' : '700 ') + size + 'px ' + SANS;
+}
+
+function teken() {
+  const lay = opmaak();
+  const onder = lay === 'onder-wit';
+  const kleur = lay === 'boven-oranje' ? ORANJE : '#fff';
+  const o = ontwerp;
+
+  // 1. foto
+  ctx.fillStyle = '#8a9a7a'; ctx.fillRect(0, 0, W, H);
+  const foto = eigenFoto || voorbeeldFoto;
+  if (foto) {
+    const basis = Math.max(W / foto.naturalWidth, H / foto.naturalHeight) * zoom;
+    const fw = foto.naturalWidth * basis, fh = foto.naturalHeight * basis;
+    const maxX = (fw - W) / 2, maxY = (fh - H) / 2;
+    px = Math.max(-maxX, Math.min(maxX, px));
+    py = Math.max(-maxY, Math.min(maxY, py));
+    ctx.drawImage(foto, (W - fw) / 2 + px, (H - fh) / 2 + py, fw, fh);
+  }
+
+  // 2. verloop voor leesbaarheid
+  const naam = $('fotograaf').value.trim();
+  const creditBoven = o.credit && lay === o.opmaak ? o.credit === 'boven' : onder;
+  if ($('schaduw').checked) {
+    const licht = lay === 'boven-oranje';
+    const sterk = licht ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)';
+    const leeg = licht ? 'rgba(255,255,255,0)' : 'rgba(0,0,0,0)';
+    const g = onder ? ctx.createLinearGradient(0, H, 0, H * 0.5) : ctx.createLinearGradient(0, 0, 0, H * 0.45);
+    g.addColorStop(0, sterk); g.addColorStop(1, leeg);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const voetOnder = $('voet').value.trim();
+    if ((naam && !creditBoven) || voetOnder) {
+      const g2 = ctx.createLinearGradient(0, H, 0, H - 220);
+      g2.addColorStop(0, 'rgba(0,0,0,0.35)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+    }
+    if (naam && creditBoven && !onder) {
+      const g3 = ctx.createLinearGradient(0, 0, 0, 160);
+      g3.addColorStop(0, 'rgba(0,0,0,0.25)'); g3.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g3; ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  // 3. grafiek (alleen bij dat ontwerp)
+  if (o.overlay && overlayImg && $('grafiek').checked) {
+    ctx.drawImage(overlayImg, o.overlay.x, o.overlay.y, o.overlay.w, o.overlay.h);
+  }
+
+  // 4. tekstblokken opmeten
+  const blokken = o.blokken.map(b => {
+    let size = b.size;
+    const tekst = b.veld === 'aantal' ? $('aantal').value.trim() : $(b.veld).value;
+    const maxB = W - b.x - 40;
+    ctx.font = lettertype(b.veld, size);
+    let r = regels(tekst, maxB);
+    if (b.veld !== 'sub') {
+      while (r.length > 2 && size > 56) { size -= 4; ctx.font = lettertype(b.veld, size); r = regels(tekst, maxB); }
+    }
+    return { ...b, size, regels: r, lh: size * 1.2 };
+  });
+  // totale hoogte van eerste tot laatste basislijn
+  let hoogte = 0, eerste = true;
+  blokken.forEach((b, i) => {
+    if (!b.regels.length) return;
+    if (!eerste) hoogte += o.gaps[i - 1] ?? b.size * 1.4;
+    hoogte += (b.regels.length - 1) * b.lh;
+    eerste = false;
+  });
+  let y;
+  if (onder) y = (o.opmaak === 'onder-wit' ? o.eind : 1213) - hoogte;
+  else y = o.opmaak !== 'onder-wit' ? o.start : 158.8;
+  const xVerschuif = (onder && o.opmaak !== 'onder-wit') ? 0 : (!onder && o.opmaak === 'onder-wit') ? -116 : 0;
+
+  // 5. tekst tekenen
+  ctx.fillStyle = kleur; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.shadowColor = kleur === '#fff' ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0)'; ctx.shadowBlur = 10;
+  eerste = true;
+  blokken.forEach((b, i) => {
+    if (!b.regels.length) return;
+    if (!eerste) y += o.gaps[i - 1] ?? b.size * 1.4;
+    ctx.font = lettertype(b.veld, b.size);
+    b.regels.forEach((r, j) => { if (j) y += b.lh; ctx.fillText(r, b.x + xVerschuif, y); });
+    eerste = false;
+  });
+
+  // 6. handgeschreven regel onderaan
+  const voet = $('voet').value.trim();
+  ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  if (voet) {
+    ctx.font = '400 48.9px ' + HAND;
+    ctx.fillText(voet, 83.2, 1305.1);
+  }
+
+  // 7. fotograaf + camera
+  if (naam) {
+    ctx.font = '400 43.3px ' + SANS;
+    ctx.textAlign = 'right';
+    ctx.fillText(naam, 930, creditBoven ? 86.2 : 1296.5);
+    ctx.textAlign = 'left';
+    ctx.shadowColor = 'rgba(0,0,0,0)';
+    if (camera.complete && camera.naturalWidth) ctx.drawImage(camera, 954.7, creditBoven ? 34.7 : 1245, 92, 69.8);
+  }
+  ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0;
+}
+
+['titel', 'sub', 'aantal', 'fotograaf', 'voet', 'schaduw', 'grafiek'].forEach(id => $(id).addEventListener('input', teken));
+document.querySelectorAll('input[name=opmaak]').forEach(r => r.addEventListener('change', teken));
+
+/* ---------- opslaan / delen ---------- */
+function bestandsnaam() {
+  const t = ($('titel').value || ontwerp.id).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return 'bimag-' + (t || 'post') + '.png';
+}
+$('download').addEventListener('click', () => {
+  try {
+    doek.toBlob(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = bestandsnaam();
+      document.body.appendChild(a); a.click(); a.remove();
+      $('status').textContent = 'Opgeslagen! Je vindt de afbeelding bij je downloads.';
+    }, 'image/png');
+  } catch (e) { $('status').textContent = 'Opslaan lukt niet als je dit bestand lokaal opent. Gebruik de online versie.'; }
+});
+if (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] })) {
+  $('deel').hidden = false;
+  $('deel').addEventListener('click', () => {
+    doek.toBlob(async b => {
+      try { await navigator.share({ files: [new File([b], bestandsnaam(), { type: 'image/png' })], text: $('posttekst').value }); }
+      catch (e) { /* geannuleerd */ }
+    }, 'image/png');
+  });
+}
+$('kopieer').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('posttekst').value); }
+  catch (e) { $('posttekst').select(); document.execCommand('copy'); }
+  $('kopieer').textContent = 'Gekopieerd ✓';
+  setTimeout(() => $('kopieer').textContent = 'Kopieer tekst', 2000);
+});
+
+/* ---------- keuzetekst bij de post ---------- */
+$('posttekst').value = POSTTEKSTEN[0];
+document.querySelectorAll('input[name=tekstkeuze]').forEach(r => r.addEventListener('change', () => {
+  $('posttekst').value = POSTTEKSTEN[+r.value];
+}));
+
+/* ---------- start ---------- */
+kiesOntwerp(ONTWERPEN[0]);
+if (document.fonts) {
+  Promise.all([
+    document.fonts.load('700 80px ' + SANS), document.fonts.load('400 50px ' + SANS), document.fonts.load('400 50px ' + HAND)
+  ]).catch(() => {}).then(teken);
+  document.fonts.addEventListener('loadingdone', teken);
+}
+</script>
+</body>
+</html>
